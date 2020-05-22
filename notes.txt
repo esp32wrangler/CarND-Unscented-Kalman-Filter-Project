@@ -1,0 +1,58 @@
+Process Noise and the UKF Project
+
+For the CTRV model, two parameters define the process noise:
+
+    σa2\large \sigma^2_aσa2​ representing longitudinal acceleration noise (you might see this referred to as linear acceleration)
+    σψ¨2\large \sigma^2_{\ddot\psi}σψ¨​2​ representing yaw acceleration noise (this is also called angular acceleration)
+
+In the project, both of these values will need to be tuned. You will have to test different values in order to get a working solution. In the video, Dominik mentions using σa2=9m2s4\large \sigma^2_a = 9 \frac{m^2}{s^4}σa2​=9s4m2​ as a starting point when tracking a vehicle. In the UKF project, you will be tracking a bicycle rather than a vehicle. So 9 might not be an appropriate acceleration noise parameter. Tuning will involve:
+
+    guessing appropriate parameter values
+    running the UKF filter
+    deciding if the results are good enough
+    tweaking the parameters and repeating the process
+
+Linear Acceleration Noise Parameter Intuition
+
+Let's get some intuition for these noise parameters. The units for the acceleration noise parameter σa2\large \sigma^2_aσa2​ are m2s4\Large\frac{m^2}{s^4}s4m2​. Taking the square root, we get σa\large \sigma_aσa​ with units ms2\large \frac{m}{s^2}s2m​. So the square root of the acceleration noise parameter has the same units as acceleration: ms2\large \frac{m}{s^2}s2m​
+
+The parameter σa\large \sigma_aσa​ is the standard deviation of linear acceleration! Remember from the "CTRV Process Noise Vector" lecture that the linear acceleration is being modeled as a Gaussian distribution with mean zero and standard deviation σa\large \sigma_aσa​. In a Gaussian distribution, about 95% of your values are within 2σa\large \sigma_aσa​.
+
+So if you choose σa2=9m2s4\large \sigma^2_a = 9 \frac{m^2}{s^4}σa2​=9s4m2​, then you expect the acceleration to be between −6ms2\large -6 \frac{m}{s^2}−6s2m​ and +6ms2\large +6 \frac{m}{s^2}+6s2m​ about 95% of the time.
+
+Tuning parameters involves some trial and error. Using your intuition can help you find reasonable initial values.
+
+Initializing the Kalman Filter
+
+As discussed previously, the process noise parameters have an important effect on your Kalman filter; you will need to tune the longitudinal and yaw acceleration noise parameters as part of the project.
+
+The initial values for your state variables will also affect your Kalman filter's performance. Both the:
+
+    state vector x and the
+    state covariance matrix P
+
+need to be initialized for the unscented Kalman filter to work properly.
+Initializing the State Vector x
+
+The state vector x contains x=[px,py,v,ψ,ψ˙]x = [p_x, p_y, v, \psi, \dot{\psi}]x=[px​,py​,v,ψ,ψ˙​].
+
+You won't know where the bicycle is until you receive the first sensor measurement. Once the first sensor measurement arrives, you can initialize pxp_xpx​ and pyp_ypy​.
+
+For the other variables in the state vector x, you can try different initialization values to see what works best.
+
+Note that although radar does include velocity information, the radar velocity and the CTRV velocity are not the same. Radar velocity is measured from the autonomous vehicle's perspective. If you drew a straight line from the vehicle to the bicycle, radar measures the velocity along that line.
+
+In the CTRV model, the velocity is from the object's perspective, which in this case is the bicycle; the CTRV velocity is tangential to the circle along which the bicycle travels. Therefore, you cannot directly use the radar velocity measurement to initialize the state vector.
+Initializing the State Covariance Matrix P
+
+To initialize the state covariance matrix P, one option is to start with the identity matrix. For the CTRV model, P is a 5x5 matrix. The identity matrix would be: Pinitial=[1000001000001000001000001] P_{\text initial} = \begin{bmatrix} 1 \qquad 0 \qquad 0 \qquad 0 \qquad 0 \\ 0 \qquad 1 \qquad 0 \qquad 0 \qquad 0 \\ 0 \qquad 0 \qquad 1 \qquad 0 \qquad 0 \\ 0 \qquad 0 \qquad 0 \qquad 1 \qquad 0 \\ 0 \qquad 0 \qquad 0 \qquad 0 \qquad 1 \end{bmatrix} Pinitial​=⎣⎢⎢⎢⎢⎡​1000001000001000001000001​⎦⎥⎥⎥⎥⎤​
+
+Think back to what the state covariance matrix represents: take for example the value in the first row, second column. The value at (1, 2) would be the covariance σpx,py\large \sigma_{px, py}σpx,py​ measuring the linear relationship between the two variables.
+
+The diagonal values represent the variances for each of the variables in the x state vector: [σpx2,σpy2,σv2,σψ2,σψ˙2]\large [\sigma^2_{p_x}, \sigma^2_{p_y}, \sigma^2_{v}, \sigma^2_{\psi}, \sigma^2_{\dot{\psi}}][σpx​2​,σpy​2​,σv2​,σψ2​,σψ˙​2​].
+
+Why is the identity matrix a good place to start? Since the non-diagonal values represent the covariances between variables, the P matrix is symmetrical. The identity matrix is also symmetrical. The symmetry comes from the fact that the covariance between two variables is the same whether you look at (x, y) or (y, x): σpx,py=σpy,px\large \sigma_{px, py} = \sigma_{py, px}σpx,py​=σpy,px​. If you print out the P matrix in your UKF code, you will see that P remains symmetrical even after the matrix gets updated. If your solution is working, you will also see that P starts to converge to small values relatively quickly.
+
+Instead of setting each of the diagonal values to 1, you can try setting the diagonal values by how much difference you expect between the true state and the initialized x state vector. For example, in the project, we assume the standard deviation of the lidar x and y measurements is 0.15. If we initialized pxp_xpx​ with a lidar measurement, the initial variance or uncertainty in pxp_xpx​ would probably be less than 1.
+
+You will have to experiment with different initialization values to find a working solution.
